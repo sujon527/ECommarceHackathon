@@ -13,11 +13,11 @@ builder.Services.Configure<MongoSettings>(
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
-// Register Validators
-builder.Services.AddScoped<IValidator<CreateUserDto>, NameValidator>();
-builder.Services.AddScoped<IValidator<CreateUserDto>, AgeValidator>();
-builder.Services.AddScoped<IValidator<CreateUserDto>, PasswordValidator>();
-builder.Services.AddScoped<IValidator<CreateUserDto>, UniquenessValidator>();
+// Register Validators using the new common interface
+builder.Services.AddScoped<IValidator<IUserValidationFields>, NameValidator>();
+builder.Services.AddScoped<IValidator<IUserValidationFields>, AgeValidator>();
+builder.Services.AddScoped<IValidator<IUserValidationFields>, PasswordValidator>();
+builder.Services.AddScoped<IValidator<IUserValidationFields>, UniquenessValidator>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 

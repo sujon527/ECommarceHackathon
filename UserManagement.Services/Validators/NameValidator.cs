@@ -1,14 +1,13 @@
 using System.Text.RegularExpressions;
-using UserManagement.Core.DTOs;
 using UserManagement.Core.Interfaces;
 
 namespace UserManagement.Services.Validators;
 
-public class NameValidator : IValidator<CreateUserDto>
+public class NameValidator : IValidator<IUserValidationFields>
 {
     private static readonly Regex NameRegex = new Regex(@"^[a-zA-Z\s\-']+$", RegexOptions.Compiled);
 
-    public Task<(bool IsValid, string? ErrorMessage)> ValidateAsync(CreateUserDto context)
+    public Task<(bool IsValid, string? ErrorMessage)> ValidateAsync(IUserValidationFields context)
     {
         if (string.IsNullOrWhiteSpace(context.FirstName) || context.FirstName.Length < 2 || context.FirstName.Length > 50 || !NameRegex.IsMatch(context.FirstName))
         {

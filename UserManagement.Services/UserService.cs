@@ -9,9 +9,9 @@ namespace UserManagement.Services;
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
-    private readonly IEnumerable<IValidator<CreateUserDto>> _validators;
+    private readonly IEnumerable<IValidator<IUserValidationFields>> _validators;
 
-    public UserService(IUserRepository userRepository, IEnumerable<IValidator<CreateUserDto>> validators)
+    public UserService(IUserRepository userRepository, IEnumerable<IValidator<IUserValidationFields>> validators)
     {
         _userRepository = userRepository;
         _validators = validators;
@@ -24,14 +24,7 @@ public class UserService : IUserService
         createUserDto.PhoneNumber = NormalizePhoneNumber(createUserDto.PhoneNumber);
 
         // 2. Modular Validation
-        foreach (var validator in _validators)
-        {
-            var (isValid, errorMessage) = await validator.ValidateAsync(createUserDto);
-            if (!isValid)
-            {
-                throw new Exception(errorMessage);
-            }
-        }
+        await RunValidatorsAsync(createUserDto);
 
         // 3. User Creation & Hashing
         var user = new User
@@ -50,6 +43,51 @@ public class UserService : IUserService
 
         await _userRepository.AddAsync(user);
 
+        return MapToDto(user);
+    }
+
+    public async Task<UserDto> UpdateUserAsync(string id, UpdateUserDto updateUserDto)
+    {
+        // 1. Fetch User
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+        {
+            throw new Exception("User not found.");
+        }
+
+        // 2. Normalization
+        updateUserDto.UserId = id;
+        updateUserDto.PhoneNumber = NormalizePhoneNumber(updateUserDto.PhoneNumber);
+
+        // 3. Modular Validation (Reuses Name, Age, Uniqueness validators)
+        await RunValidatorsAsync(updateUserDto);
+
+        // 4. Update Fields (Protecting Email and Password)
+        user.FirstName = updateUserDto.FirstName;
+        user.LastName = updateUserDto.LastName;
+        user.PhoneNumber = updateUserDto.PhoneNumber;
+        user.DateOfBirth = updateUserDto.DateOfBirth;
+        user.DisplayName = updateUserDto.DisplayName ?? $"{updateUserDto.FirstName} {updateUserDto.LastName}";
+
+        await _userRepository.UpdateAsync(user);
+
+        return MapToDto(user);
+    }
+
+    private async Task RunValidatorsAsync(IUserValidationFields fields)
+    {
+        foreach (var validator in _validators)
+        {
+            var (isValid, errorMessage) = await validator.ValidateAsync(fields);
+            if (!isValid)
+            {
+                throw new Exception(errorMessage);
+            }
+        }
+    }
+
+    private UserDto MapToDto(User user)
+    {
         return new UserDto
         {
             Id = user.Id!,

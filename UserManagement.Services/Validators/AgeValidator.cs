@@ -1,11 +1,10 @@
-using UserManagement.Core.DTOs;
 using UserManagement.Core.Interfaces;
 
 namespace UserManagement.Services.Validators;
 
-public class AgeValidator : IValidator<CreateUserDto>
+public class AgeValidator : IValidator<IUserValidationFields>
 {
-    public Task<(bool IsValid, string? ErrorMessage)> ValidateAsync(CreateUserDto context)
+    public Task<(bool IsValid, string? ErrorMessage)> ValidateAsync(IUserValidationFields context)
     {
         if (context.DateOfBirth.HasValue)
         {

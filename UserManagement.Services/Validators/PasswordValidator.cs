@@ -1,20 +1,20 @@
 using System.Text.RegularExpressions;
-using UserManagement.Core.DTOs;
 using UserManagement.Core.Interfaces;
 
 namespace UserManagement.Services.Validators;
 
-public class PasswordValidator : IValidator<CreateUserDto>
+public class PasswordValidator : IValidator<IUserValidationFields>
 {
     private readonly string[] _weakPasswords = { "password", "12345678", "qwertyuiop", "password123" };
 
-    public Task<(bool IsValid, string? ErrorMessage)> ValidateAsync(CreateUserDto context)
+    public Task<(bool IsValid, string? ErrorMessage)> ValidateAsync(IUserValidationFields context)
     {
         var password = context.Password;
         var email = context.Email;
         var phoneNumber = context.PhoneNumber;
 
-        if (string.IsNullOrWhiteSpace(password)) return Task.FromResult((false, "Password is required."));
+        // Skip password validation if not provided (e.g. during Update)
+        if (string.IsNullOrWhiteSpace(password)) return Task.FromResult((true, (string?)null));
         
         if (password.Length < 10) return Task.FromResult((false, "Password must be at least 10 characters long."));
 
@@ -28,10 +28,13 @@ public class PasswordValidator : IValidator<CreateUserDto>
             return Task.FromResult((false, "Password must include uppercase, lowercase, number, and special character."));
         }
 
-        var emailPrefix = email.Split('@')[0];
-        if (password.Contains(emailPrefix, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(email))
         {
-            return Task.FromResult((false, "Password must not contain the email prefix."));
+            var emailPrefix = email.Split('@')[0];
+            if (password.Contains(emailPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult((false, "Password must not contain the email prefix."));
+            }
         }
 
         if (!string.IsNullOrEmpty(phoneNumber) && phoneNumber.Length >= 6)
