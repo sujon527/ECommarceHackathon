@@ -1,3 +1,4 @@
+using UserManagement.Core.Configuration;
 using UserManagement.Core.Interfaces;
 using UserManagement.Data.Configuration;
 using UserManagement.Data.Repositories;
@@ -9,6 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.Configure<MongoSettings>(
     builder.Configuration.GetSection("MongoSettings"));
+builder.Services.Configure<SmtpSettings>(
+    builder.Configuration.GetSection("SmtpSettings"));
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
@@ -18,6 +21,7 @@ builder.Services.AddScoped<AgeValidator>();
 builder.Services.AddScoped<PasswordValidator>();
 builder.Services.AddScoped<UniquenessValidator>();
 
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddControllers();

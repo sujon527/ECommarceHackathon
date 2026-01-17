@@ -10,6 +10,7 @@ namespace UserManagement.Services;
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IEmailService _emailService;
     private readonly IValidator<IUserValidationFields> _nameValidator;
     private readonly IValidator<IUserValidationFields> _ageValidator;
     private readonly IValidator<IUserValidationFields> _passwordValidator;
@@ -17,12 +18,14 @@ public class UserService : IUserService
 
     public UserService(
         IUserRepository userRepository,
+        IEmailService emailService,
         NameValidator nameValidator,
         AgeValidator ageValidator,
         PasswordValidator passwordValidator,
         UniquenessValidator uniquenessValidator)
     {
         _userRepository = userRepository;
+        _emailService = emailService;
         _nameValidator = nameValidator;
         _ageValidator = ageValidator;
         _passwordValidator = passwordValidator;
@@ -57,6 +60,20 @@ public class UserService : IUserService
         };
 
         await _userRepository.AddAsync(user);
+
+        // 4. Send Welcome Email
+        try
+        {
+            await _emailService.SendEmailAsync(
+                user.Email,
+                "Welcome to Ecommerce Hackathon!",
+                $"<h1>Hello {user.FirstName}!</h1><p>Thank you for registering. Your account is now active.</p>");
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail registration
+            Console.WriteLine($"Failed to send welcome email: {ex.Message}");
+        }
 
         return MapToDto(user);
     }
