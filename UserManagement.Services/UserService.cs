@@ -3,18 +3,30 @@ using UserManagement.Core.Entities;
 using UserManagement.Core.Interfaces;
 using BCrypt.Net;
 using System.Text.RegularExpressions;
+using UserManagement.Services.Validators;
 
 namespace UserManagement.Services;
 
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
-    private readonly IEnumerable<IValidator<IUserValidationFields>> _validators;
+    private readonly IValidator<IUserValidationFields> _nameValidator;
+    private readonly IValidator<IUserValidationFields> _ageValidator;
+    private readonly IValidator<IUserValidationFields> _passwordValidator;
+    private readonly IValidator<IUserValidationFields> _uniquenessValidator;
 
-    public UserService(IUserRepository userRepository, IEnumerable<IValidator<IUserValidationFields>> validators)
+    public UserService(
+        IUserRepository userRepository,
+        NameValidator nameValidator,
+        AgeValidator ageValidator,
+        PasswordValidator passwordValidator,
+        UniquenessValidator uniquenessValidator)
     {
         _userRepository = userRepository;
-        _validators = validators;
+        _nameValidator = nameValidator;
+        _ageValidator = ageValidator;
+        _passwordValidator = passwordValidator;
+        _uniquenessValidator = uniquenessValidator;
     }
 
     public async Task<UserDto> RegisterUserAsync(CreateUserDto createUserDto)
@@ -23,8 +35,11 @@ public class UserService : IUserService
         createUserDto.Email = createUserDto.Email.Trim().ToLowerInvariant();
         createUserDto.PhoneNumber = NormalizePhoneNumber(createUserDto.PhoneNumber);
 
-        // 2. Modular Validation
-        await RunValidatorsAsync(createUserDto);
+        // 2. Service-Led Validation Orchestration
+        await ValidateOrThrowAsync(_nameValidator, createUserDto);
+        await ValidateOrThrowAsync(_ageValidator, createUserDto);
+        await ValidateOrThrowAsync(_passwordValidator, createUserDto);
+        await ValidateOrThrowAsync(_uniquenessValidator, createUserDto);
 
         // 3. User Creation & Hashing
         var user = new User
@@ -48,21 +63,18 @@ public class UserService : IUserService
 
     public async Task<UserDto> UpdateUserAsync(string id, UpdateUserDto updateUserDto)
     {
-        // 1. Fetch User
         var user = await _userRepository.GetByIdAsync(id);
-        if (user == null)
-        {
-            throw new Exception("User not found.");
-        }
+        if (user == null) throw new Exception("User not found.");
 
-        // 2. Normalization
         updateUserDto.UserId = id;
         updateUserDto.PhoneNumber = NormalizePhoneNumber(updateUserDto.PhoneNumber);
 
-        // 3. Modular Validation (Reuses Name, Age, Uniqueness validators)
-        await RunValidatorsAsync(updateUserDto);
+        // 2. Service-Led Validation Orchestration (Selecting only relevant validators)
+        await ValidateOrThrowAsync(_nameValidator, updateUserDto);
+        await ValidateOrThrowAsync(_ageValidator, updateUserDto);
+        await ValidateOrThrowAsync(_uniquenessValidator, updateUserDto);
+        // PASSWORD VALIDATOR IS EXPLICITLY OMITTED FOR UPDATE
 
-        // 4. Update Fields (Protecting Email and Password)
         user.FirstName = updateUserDto.FirstName;
         user.LastName = updateUserDto.LastName;
         user.PhoneNumber = updateUserDto.PhoneNumber;
@@ -74,16 +86,28 @@ public class UserService : IUserService
         return MapToDto(user);
     }
 
-    private async Task RunValidatorsAsync(IUserValidationFields fields)
+    public async Task<UserDto?> GetByIdAsync(string id)
     {
-        foreach (var validator in _validators)
-        {
-            var (isValid, errorMessage) = await validator.ValidateAsync(fields);
-            if (!isValid)
-            {
-                throw new Exception(errorMessage);
-            }
-        }
+        var user = await _userRepository.GetByIdIncludingDeletedAsync(id);
+        return user != null ? MapToDto(user) : null;
+    }
+
+    public async Task<List<UserDto>> GetActiveUsersAsync()
+    {
+        var users = await _userRepository.GetAllAsync();
+        return users.Select(MapToDto).ToList();
+    }
+
+    public async Task<List<UserDto>> GetInactiveUsersAsync()
+    {
+        var users = await _userRepository.GetInactiveAsync();
+        return users.Select(MapToDto).ToList();
+    }
+
+    private async Task ValidateOrThrowAsync(IValidator<IUserValidationFields> validator, IUserValidationFields fields)
+    {
+        var (isValid, errorMessage) = await validator.ValidateAsync(fields);
+        if (!isValid) throw new Exception(errorMessage);
     }
 
     private UserDto MapToDto(User user)

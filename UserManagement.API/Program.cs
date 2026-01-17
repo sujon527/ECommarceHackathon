@@ -1,4 +1,3 @@
-using UserManagement.Core.DTOs;
 using UserManagement.Core.Interfaces;
 using UserManagement.Data.Configuration;
 using UserManagement.Data.Repositories;
@@ -13,11 +12,11 @@ builder.Services.Configure<MongoSettings>(
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
-// Register Validators using the new common interface
-builder.Services.AddScoped<IValidator<IUserValidationFields>, NameValidator>();
-builder.Services.AddScoped<IValidator<IUserValidationFields>, AgeValidator>();
-builder.Services.AddScoped<IValidator<IUserValidationFields>, PasswordValidator>();
-builder.Services.AddScoped<IValidator<IUserValidationFields>, UniquenessValidator>();
+// Register concrete validator types for explicit injection into UserService
+builder.Services.AddScoped<NameValidator>();
+builder.Services.AddScoped<AgeValidator>();
+builder.Services.AddScoped<PasswordValidator>();
+builder.Services.AddScoped<UniquenessValidator>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 

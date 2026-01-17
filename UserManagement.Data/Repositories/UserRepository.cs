@@ -31,4 +31,14 @@ public class UserRepository : MongoRepository<User>, IUserRepository
     {
         return await _collection.Find(u => u.PhoneNumber == phoneNumber).FirstOrDefaultAsync();
     }
+
+    public async Task<List<User>> GetInactiveAsync()
+    {
+        return await _collection.Find(u => u.IsDeleted).ToListAsync();
+    }
+
+    public async Task<User?> GetByIdIncludingDeletedAsync(string id)
+    {
+        return await _collection.Find(u => u.Id == id).FirstOrDefaultAsync();
+    }
 }

@@ -8,4 +8,6 @@ public interface IUserRepository : IRepository<User>
     Task<User?> GetByPhoneNumberAsync(string phoneNumber);
     Task<User?> GetByEmailIncludingDeletedAsync(string email);
     Task<User?> GetByPhoneNumberIncludingDeletedAsync(string phoneNumber);
+    Task<List<User>> GetInactiveAsync();
+    Task<User?> GetByIdIncludingDeletedAsync(string id);
 }

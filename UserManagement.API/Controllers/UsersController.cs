@@ -15,6 +15,28 @@ public class UsersController : ControllerBase
         _userService = userService;
     }
 
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(string id)
+    {
+        var user = await _userService.GetByIdAsync(id);
+        if (user == null) return NotFound(new { message = "User not found." });
+        return Ok(user);
+    }
+
+    [HttpGet("active")]
+    public async Task<IActionResult> GetActive()
+    {
+        var users = await _userService.GetActiveUsersAsync();
+        return Ok(users);
+    }
+
+    [HttpGet("inactive")]
+    public async Task<IActionResult> GetInactive()
+    {
+        var users = await _userService.GetInactiveUsersAsync();
+        return Ok(users);
+    }
+
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] CreateUserDto createUserDto)
     {
